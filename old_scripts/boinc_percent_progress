@@ -1,0 +1,320 @@
+#!/bin/bash
+#=================================================
+# BOINC starter/status displayer
+# Jean Philippe EIMER - phil.eimer@9online.fr
+#-------------------------------------------------
+# Released under the GNU General Public License v2
+#=================================================
+
+#---------------------------------------------
+#---------------------------------------------
+# Parameters to be set before using the script
+
+# The path where BOINC state files reside
+BOINC_PATH=/var/lib/boinc
+
+# The path where BOINC client executable resides (without the client name)
+# If client 'boinc' is in /usr/bin, you'll have BOINC_BIN_PATH=/usr/bin
+BOINC_BIN_PATH=/usr/bin
+
+# Options to give to the client when it starts
+# See the documentation of the BOINC client
+BOINC_OPTIONS=""
+
+# Put here your email address to grab Boinc Combined Statistics on network
+# This address won't be transmitted over the network
+CROSS_PROJECT_EMAIL="phil.eimer@9online.fr"
+
+
+# Nothing should be modified below this line
+#---------------------------------------------
+#---------------------------------------------
+
+#***********
+# VARIABLES
+#***********
+VERSION="2.10"
+DATE="4/2008"
+AUTHOR="Jean Philippe EIMER"
+EMAIL="phil.eimer@9online.fr"
+
+BOINC_EXEC=boinc
+
+# LOG file for BOINC, with its absolute path
+#BOINC_LOG_FILE=$BOINC_PATH/boinc.log
+BOINC_LOG_FILE=$BOINC_PATH/stdoutdae.txt
+
+STATE_FILE=$BOINC_PATH/client_state.xml
+if [ -x /bin/pidof ]; then
+	PID_CMD=/bin/pidof
+else
+	PID_CMD=/sbin/pidof
+fi
+DATE_CMD=date
+PS_CMD=ps
+PGREP_CMD=pgrep
+GREP_CMD=grep
+WC_CMD=wc
+
+MD5_CMD=md5sum
+WGET_CMD=wget
+
+BOINC_DATE_FORMAT="%c"
+
+# Address to grab statistics on network
+# and the file they are stored in temporary 
+BCS_ADDRESS="http://boinc.netsoft-online.com"
+BCS_FILE=/tmp/bcs.xml
+
+
+#***********
+# FUNCTIONS
+#***********
+
+
+
+
+format_percent()
+{
+	local PERCENT
+	
+	PERCENT="${1:2:2}${MESSAGE[$MESS_FLOAT]}${1:4}"
+	printf "%5.2f%%" $PERCENT
+}
+
+
+extract_data()
+{
+	# Extract DATA from structured XML file
+	# $1 = data chapter (string), $2 = chapter number (integer)
+	# $3 = data name (string), $4 = data line number (integer)
+	# $5 = filename (string)
+
+	# extract line
+	local EXTRACTED_DATA=`$GREP_CMD -A $4 -m $2 "<$1>" $5 | tail -n 1 -`
+
+	local DATA=${EXTRACTED_DATA/<$3>/}
+
+	if [ "$DATA" == "$EXTRACTED_DATA" ]; then
+		EXTRACTED_DATA="notfound"
+	else
+		EXTRACTED_DATA=${DATA/<\/$3>/}
+	fi
+
+	echo $EXTRACTED_DATA
+}
+
+
+extract_data_simple()
+{
+	# Extract DATA from XML file
+	# $1 = data name (string), $2 = data number (integer)
+	# $3 = filename (string)
+
+	# extract line
+	local EXTRACTED_DATA=`$GREP_CMD -m $2 "<$1>" $3 | tail -n 1 -`
+
+	EXTRACTED_DATA=${EXTRACTED_DATA/<$1>/}
+	EXTRACTED_DATA=${EXTRACTED_DATA/<\/$1>/}
+
+	echo $EXTRACTED_DATA
+}
+
+
+format_task_string()
+{
+	# remove some chars from a task string and add a TASK header
+	# $1 = string
+	
+	local STRING=${1//./_}
+	STRING=${STRING//-/_}
+
+	echo "TASK${STRING}"
+}
+
+
+add_tab()
+{
+	# add necessary tabs to align text
+	# $1 : string to align
+	# $2 : minimum tab position
+	# $3 : maximum tab position
+
+	local tab STRING="$1"
+
+	for (( tab = $2 ; tab <= $3 ; tab+=8 )); do
+		if (( ${#STRING} < $tab )); then
+			STRING="$STRING\t"
+		fi
+	done
+
+	echo "$STRING"
+}
+
+
+init_arrays()
+{
+	# $1 : boolean, long display
+
+	local an pn afn PROJECT_NAME OTHER_APP APP_NAME APP_NAME2 APP_FRIENDLY_NAME APP_VERS TASK_NB tn TASK_RESULT_NAME APP_FN
+	
+	# project array
+	PROJECT_NB=`$GREP_CMD -c "<project>" $STATE_FILE`
+
+	an=1
+
+	if [ "$1" != "" ]; then
+		afn=1;
+		
+		APP_NAME2=`extract_data app $afn name 1 $STATE_FILE`
+		APP_FRIENDLY_NAME=`extract_data app $afn user_friendly_name 2 $STATE_FILE`
+	fi
+
+	for (( pn=1 ; pn <= PROJECT_NB ; pn++ )); do
+		PROJECT_NAME=`extract_data_simple project_name $pn $STATE_FILE`
+		PROJECT_NAME=${PROJECT_NAME/ */}
+		PROJECT_NAMES[$pn]=$PROJECT_NAME
+
+		PROJECT_APPS[$pn]=""
+	
+		OTHER_APP=`extract_data /project $pn name 2 $STATE_FILE`
+	
+		while [ "$OTHER_APP" != "notfound" ]; do
+			APP_NAME=`extract_data app_version $an app_name 1 $STATE_FILE`
+			(($APP_NAME=$pn))
+			APP_NAMES[$an]=$APP_NAME
+			APP_NAME=${APP_NAME:0:6}
+			(($APP_NAME=$pn))
+			PROJECT_APPS[$pn]="${PROJECT_APPS[$pn]} $an"
+	
+			if [ "$1" != "" ]; then
+				APP_VERS=`extract_data app_version $an version_num 2 $STATE_FILE`
+				APP_VERSIONS[$an]=$APP_VERS
+	
+				if [ "$APP_NAME2" != "${APP_NAMES[$an]}" ]; then
+					((afn++))
+					APP_NAME2=`extract_data app $afn name 1 $STATE_FILE`
+					APP_FRIENDLY_NAME=`extract_data app $afn user_friendly_name 2 $STATE_FILE`
+				fi
+	
+				APP_FRIENDLY[$an]=$APP_FRIENDLY_NAME
+			fi
+	
+			OTHER_APP=`extract_data /app_version $an app_version 1 $STATE_FILE`
+			((an++))
+		done
+	done
+
+	APP_NB=$((an - 1))
+	
+	# task array
+	TASK_NB=`$GREP_CMD -c "<active_task>" $STATE_FILE`
+
+	for (( tn=1 ; tn <= TASK_NB; tn++ )); do
+		TASK_RESULT_NAME=`extract_data_simple result_name $tn $STATE_FILE`
+		TASK_RESULT_NAME=`format_task_string $TASK_RESULT_NAME`
+		(($TASK_RESULT_NAME=$tn))
+	done
+}
+
+
+
+display_units()
+{
+	# Displays information about Working Units
+	# $1 = long format (if = "long")
+
+	local WORKUNIT_NB wn WORKUNIT_NAME WORKUNIT_NAME_FORMATED WORKUNIT_APP WORKUNIT_PROJECT WORKUNIT_STATE
+	local WORKUNIT_RESULT_NAME TASK_ID WORKUNIT_REMAIN 
+	local WORKUNIT_CPU PROG_PERCENT TASK_STATE PROG_PERCENT_COLOR
+	local WORKUNIT_CURRENT PROGRESS WORKUNIT_DEAD_LINE 
+
+	#echo -e "\n $BOINC_TITLE_COLOR${MESSAGE[$MESS_CURRENT]}$BOINC_NORMAL"
+		mess=`printf "%1.1f" 0`
+	mess=${mess//0/}
+	MESSAGE[$MESS_FLOAT]="$mess"
+
+	# Number of WU
+	WORKUNIT_NB=`$GREP_CMD -c "<workunit>" $STATE_FILE`
+
+	if (( WORKUNIT_NB != 0 )); then
+		for (( wn = 1; wn <= WORKUNIT_NB ; wn++ )); do
+			WORKUNIT_NAME=`extract_data workunit $wn name 1 $STATE_FILE`
+		
+			WORKUNIT_APP=`extract_data workunit $wn app_name 2 $STATE_FILE`
+			WORKUNIT_STATE=`extract_data_simple state $wn $STATE_FILE`
+			WORKUNIT_RESULT_NAME=`extract_data result $wn name 1 $STATE_FILE`
+			WORKUNIT_RESULT_NAME=`format_task_string $WORKUNIT_RESULT_NAME`
+			TASK_ID=${!WORKUNIT_RESULT_NAME}
+			PROG_PERCENT_COLOR=""
+
+							# short format display
+				WORKUNIT_NAME_FORMATED="   $WORKUNIT_NAME"
+				WORKUNIT_NAME_FORMATED=`add_tab "$WORKUNIT_NAME_FORMATED" 24 48` 
+				if (( ${#WORKUNIT_NAME_FORMATED} > 47 )); then
+					WORKUNIT_NAME_FORMATED="$WORKUNIT_NAME_FORMATED\n     \t\t\t\t\t\t"
+				fi
+				#echo -en "$WORKUNIT_NAME_FORMATED"
+
+				WORKUNIT_APP=`add_tab "$WORKUNIT_APP" 8 16` 
+				#echo -en "$WORKUNIT_APP"
+
+				if (( WORKUNIT_STATE < 3 )); then
+					# states 0 1 2
+					if [ "$TASK_ID" == "" ]; then
+						PROG_PERCENT="0%"
+					else
+						PROGRESS=`extract_data_simple fraction_done $TASK_ID $STATE_FILE`
+						PROG_PERCENT=`format_percent $PROGRESS`
+
+#						TASK_STATE=${RUNNING_WORKUNIT##$WORKUNIT_NAME}
+#						if (( ${#TASK_STATE} < ${#RUNNING_WORKUNIT} )); then
+
+						TASK_STATE=`extract_data_simple active_task_state $TASK_ID $STATE_FILE`
+
+						if (( TASK_STATE == 1 )); then
+							PROG_PERCENT="$BOINC_INFO$PROG_PERCENT$BOINC_NORMAL"
+						fi
+					fi
+				else
+					# states 3 4 5
+					PROG_PERCENT="100%"
+				fi
+# This is it
+				
+			echo -en "Boinc Progress: $PROG_PERCENT"
+
+
+			#fi
+			echo
+		done
+	else
+		echo -e "   ${MESSAGE[$MESS_CURRENT_NONE]}"
+	fi
+}
+
+
+
+
+#********
+# SCRIPT
+#********
+#set_messages
+
+BOINC_PID=`$PID_CMD $BOINC_EXEC`
+
+#running_task_from_log
+
+# color is not used
+BOINC_WARNING=""
+BOINC_INFO=""
+BOINC_TITLE_COLOR=""
+BOINC_SUBTITLE_COLOR=""
+BOINC_NORMAL=""				
+
+init_arrays
+#display_apps
+#display_projects
+display_units
+
+#echo

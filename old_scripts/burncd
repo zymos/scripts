@@ -1,0 +1,4 @@
+#!/bin/bash
+
+
+mkisofs -r -R -J -l /mnt/windows/burn/ | cdrecord -v dev=ATAPI:0,0,0 -

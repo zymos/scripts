@@ -1,0 +1,76 @@
+#!/bin/bash
+#================================================================================
+### mixer-osd
+## Modified from the work of jelloir and slapfish on the CrunchBang
+## Linux Forums.
+#================================================================================
+
+# Some user-defined values
+MIXERNAME="Master" # The name of the amixer master device
+GRANULARITY=32 # The approximate number of possible volume positions allowed
+FONTSIZE=80 # The size of font used by the OSD display
+# Fontsize often needs to change when granularity changes
+
+# Pull the numerical limit from the Mixer
+LIMIT=$(amixer get $MIXERNAME | grep "Limits" | awk '{print $5}')
+
+# Set volume increment based on granularity
+let VOLINC=LIMIT/GRANULARITY
+let volmod=LIMIT%GRANULARITY
+let threshold=GRANULARITY/2
+if [ $volmod -gt $threshold ]; then
+   let VOLINC=VOLINC+1
+fi
+
+# Command line handler
+case $1 in
+
+   volup) (amixer set $MIXERNAME $VOLINC+) ;;
+
+   voldown) (amixer set $MIXERNAME $VOLINC-) ;;
+
+   mute) (amixer set $MIXERNAME toggle) ;;
+
+   *) 
+      echo "Usage: $0 { volup | voldown | mute }"
+      exit
+      ;;
+
+esac
+
+# Detect mute status and set OSD color
+# MUTESTATUS=$(amixer get $MIXERNAME | grep "Left:" | awk '{print $4}' | tr -d '[]')
+MUTESTATUS=$(amixer get Master | grep "Mono:" | awk '{print $6}' | tr -d '[]') #Mono
+
+if [ $MUTESTATUS == "off" ]; then
+   OSDCOLOR=red; else
+   OSDCOLOR=green
+fi
+
+
+# Create the "I" bar based on mixer setting and granularity
+# volset=$(amixer get $MIXERNAME | grep "Left:" | awk '{print $4}')
+volset=$(amixer get $MIXERNAME | grep "Mono:" | awk '{print $3}') #Mono
+
+let volcounter=volset/$VOLINC
+if [ $volcounter -gt $GRANULARITY ]; then
+   volcounter=$GRANULARITY
+fi
+
+OSDI=""
+
+while [ $volcounter -gt 0 ]
+do
+   OSDI=`echo $OSDI"I"`
+   let volcounter=volcounter-1
+done    
+
+# Clean up any running aosd_cat processes
+killall aosd_cat &> /dev/null
+
+# Display the "I" bar
+echo "$OSDI" | aosd_cat   -n "Arial Black $FONTSIZE" -u 1000 -o 200 -R $OSDCOLOR -S none -f 0 -y -10
+
+
+
+# END

@@ -1,0 +1,42 @@
+#!/bin/sh
+# replaces spaces and removes ampersands
+# prennix 3/4/2005, updated 4/5/06
+#(c) 2005 Paul Rennix - All Rights Reserved.  You may use it under the terms of the GPL
+#listed here: http://creativecommons.org/licenses/GPL/2.0/
+#If you want to use it to release in a commercial, non-GPL product, you need permission.
+
+for i in *
+ do
+ if [ -d "$i" ] # if * is a directory
+ then
+ cd "$i" # descend into the directory
+ for y in *
+ do
+ # tempa=$(echo $y | sed 's/ /_/g')
+ tempa=$(echo $y | sed 's/ /_/g' | sed -e 's/\&//g' | sed 's/__/_/g')
+ wait
+ if [ "$y" != "$tempa" ]
+ then
+ mv "$y" "$tempa"
+ wait
+ fi
+ if [ -d "$tempa" ] # if this is also a directory, call this program
+ then 
+ cd "$tempa"
+ /usr/sbin/sr # this is the name of THIS program - change this line to where you will keep this program
+ wait
+ cd ..
+ fi
+ done
+ cd ..
+ fi
+ # tempa=$(echo $i | sed 's/ /_/g')
+ tempa=$(echo $i | sed 's/ /_/g' | sed -e 's/\&//g' | sed 's/__/_/g')
+ wait
+ if [ "$i" != "$tempa" ]
+ then
+ mv "$i" "$tempa"
+ wait
+ fi
+ done
+       

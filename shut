@@ -1,0 +1,20 @@
+#!/bin/bash
+
+wall "Shuting computer down, soon!"
+
+if [ $USER == 'root' ]; then
+	wall "Setting forced shutdown for 5min, if gracefull shutdown stalls,
+	computer will halt forcefully"
+	(sleep 10m; /sbin/init 0)&
+	# (sleep 5m; wall "peep")&
+fi
+
+echo "To cancel hit ^C in 35s, or _unshut_ 1m after"
+
+sleep 5
+wall "Closing programs gracefully, now"
+(/usr/scripts/closegracefully)&
+
+sleep 60
+sudo /sbin/shutdown -h now "Yo, computers shuting down. NOW!"
+

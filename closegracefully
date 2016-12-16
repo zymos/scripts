@@ -1,0 +1,112 @@
+#!/bin/bash
+
+######################################################################
+# 
+#	"Close Gracfully"
+#	
+#	Author: ZyMOS
+#
+#	Date: 2012ish
+#
+#	Description:
+#		This scripts closes various programs gracfully.  This means
+#		the programs will close the programs as it expects to quited.
+#		In some cases this will save the current state of the program, 
+#		in other cases it will query the user to save current document.
+#		This script can be used to shutdown your computer via command-
+#		line without worrying about losing documents or crashing 
+#		programs.  Add more programs using examples below.
+#
+#	Requirements: wmctrl, xdotool, pidof
+#
+#	Usage: closegracfully
+#
+#######################################################################
+
+
+# rtorrent
+# if [[ -n `pidof rtorrent` ]];then
+	# echo "rtorrent is open, time to die (gracefully)...."
+	# (kill -2 `pidof rtorrent` &)
+# fi
+
+
+# mozilla firefox...
+if [[ -n `pidof firefox` || -n `pidof firefox.bin` || -n `pidof firefox.real` ]];then
+	echo "Closing firefox..."
+    WID=`xdotool search "Mozilla Firefox" | head -1`
+    xdotool windowactivate --sync $WID
+    xdotool key --clearmodifiers ctrl+q
+fi
+
+
+
+# galeon...
+# if [[ -n `pidof galeon` ]];then
+	# echo "closing galeon..."
+	# (galeon -q &)
+# fi
+
+# openoffice.org
+# echo "closing openOffice (if its open)..."
+# (wmctrl -c OpenOffice &)
+
+
+# LibreOffice
+if [[ -n `pidof soffice.bin` ]];then
+	echo "Closing LibreOffice..."
+	(wmctrl -c LibreOffice &)
+fi
+
+
+# DeadBeef
+if [[ -n `pidof deadbeef` ]];then
+	echo "Closing DeaDBeeF..."
+	(wmctrl -c DeaDBeeF &)
+fi
+
+
+# Inkscape
+if [[ -n `pidof inkscape` ]];then
+	echo "Closing Inkscape..."
+	(wmctrl -c Inkscape &)
+fi
+
+
+# Gimp
+if [[ -n `pidof gimp` ]];then
+	echo "Closing Gimp..."
+	(wmctrl -c gimp &)
+fi
+
+
+# Pidgin...
+# echo "closing pidgin (if its open)..."
+# (purple-remote "quit"  &)
+
+# qBittorrent
+# echo "Closing qBittorrent (if its open)..."
+# (wmctrl -c qBittorrent &)
+
+
+# echo "closing swiftfox (if its open)..."
+# (wmctrl -c swiftfox &)
+
+
+# Transmission... (may not work in minimized in tray, to fix)
+if [[ -n `pidof transmission-gtk` || -n `pidof transmission-qt` ]];then
+	echo "Closing Transmission..."
+    WID=`xdotool search "Transmission" | head -1`
+    xdotool windowactivate --sync $WID
+    xdotool key --clearmodifiers ctrl+q
+	# for transmission-cli: see transmission-remote
+fi
+
+
+# Virtualbox
+if [[ -n `pidof VirtualBox` ]];then
+	echo "Closing VirtualBox's in saved state..."
+	WID=`VBoxManage list runningvms|sed 's/.*{//'|sed 's/}//'`
+   	VBoxManage controlvm $WID savestate 
+fi
+

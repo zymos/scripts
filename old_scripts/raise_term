@@ -1,0 +1,4 @@
+#!/bin/bash
+
+wid=`xdotool search --class 'terminology'`
+xdotool windowraise $wid

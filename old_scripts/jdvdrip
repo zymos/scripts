@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# PARMS="-aid 128 -sid 7"
+#PARMS=" -slang en"
+$PARMS=""
+
+
+track=$1
+brate=$2
+name=$3
+
+#mencoder dvd://$track -ovc frameno -o frameno.avi -oac mp3lame -lameopts abr:br=96 $PARMS
+#mencoder dvd://$track -ovc frameno -o frameno.avi -oac lavc -lavcopts acodec=libmp3lame:abitrate=96  $PARMS
+mencoder dvd://$track -ovc frameno -o frameno.avi -oac faac -faacopts br=128:object=1:tns $PARMS
+mencoder dvd://$track -nosound -oac copy -o /dev/null -ovc lavc -lavcopts vcodec=mpeg4:vbitrate=$brate:vhq:vpass=1:vqmin=1:vqmax=31 -vf scale -zoom -xy 800 -vf pp  $PARMS
+mencoder dvd://$track -oac copy -o $name -ovc lavc -lavcopts vcodec=mpeg4:vbitrate=$brate:vhq:vpass=2:vqmin=1:vqmax=31 -vf scale -zoom -xy 800 -vf pp  $PARMS
+
+rm -f divx2pass.log
+rm -f frameno.avi
+echo $track $name

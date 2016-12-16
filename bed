@@ -1,0 +1,211 @@
+#!/usr/bin/perl
+
+######################################
+#
+# bed v2.0
+#
+#
+#
+#
+#Usage
+#
+#  Type bed -h or bed --help for Usage
+#
+#  Command line usage Example:
+#  zymos@zymos scripts]$ bed 3d 4h 9m
+#
+#  Sandard usage example:
+#  [zymos@zymos scripts]$ bed
+#
+#  Enter time to sleep(ex. 1d 3h 5m)> 3d 4h 9m
+#
+#
+#
+
+
+######################################
+# Configure
+
+
+#   bed.pl absolute location including bed.pl
+#   ie /home/jimmy/scripts/bed.pl
+$bedlocation = "/usr/scripts/bed";
+$xtermlocation = "/usr/bin/xterm";
+# perls location
+$perllocation = "/usr/bin/perl";
+
+$shutdown_command = '/usr/scripts/shut';
+
+
+#########################################
+# Split the time up into d h m s and return in seconds
+sub timessplit
+{
+    @times = split(/ /,$time);
+    $i=0;
+
+    foreach $temp (@times)
+    {
+	if($temp =~ /d/) {
+	    $day = $temp;
+	    $day =~ s/d//;
+	} 
+	elsif($temp =~ /h/) {
+	    $hour = $temp;
+	    $hour =~ s/h//;
+	}
+	elsif($temp =~ /m/) {
+	    $min = $temp;
+	    $min =~ s/m//;
+	}
+	elsif($temp =~ /s/) {
+	    $seconds = $temp;
+	    $seconds =~ s/s//;
+	}
+    }
+    $_ = $day*60*60*24 + $hour*60*60 + $min*60 + $seconds;
+}
+
+#################################################3
+#  Prints time pritty like
+sub timedisplay{
+    $time = $_;
+    if($time>=86400)
+    {
+	$day = int($time / 86400); 
+	print $day,"d ";
+	$time = $time - $day*86400; 
+    }
+    if($time>=3600)
+    {
+	$hour = int($time / 3600); 
+	print $hour,"h ";
+	$time = $time - $hour*3600; 
+    }
+    if($time>=60)
+    {
+	$min = int($time / 60); 
+	print $min ,"m ";
+	$time = $time - $min*60; 
+    }
+}
+
+####################################################
+# Beginging
+
+$error = 0;
+
+if ($ARGV[0] ne "popup"){
+if ($#ARGV + 1 == 0){
+print "\nEnter time to sleep(ex. 1d 3h 5m)> ";
+$time = <STDIN>;
+chomp($time);
+}
+else{
+    $time = $ARGV[0] . " " . $ARGV[1] . " " . $ARGV[3];
+    print "\ntime entered : $time\n";
+}
+
+
+$interval = 60;
+$sec = timessplit()/$interval;
+$timeleft = $sec;
+#print "\n $time \n $interval \n $sec \n";
+
+if($time =~ /[0-9]m/ | $time =~ /[0-9]d/ |$time =~ /[0-9]h/){
+
+for($i=1;$i <= $interval; $i++)
+{
+    #system "clear";
+    print "[";
+    for($j=1;$j <= $interval; $j++)
+    {
+	if($j<=$i) {print "#";}
+	else {print "-";}
+    }
+    $timeleft = ($timeleft - $sec/60);
+    $timeleft2 = sprintf("%.1f", $timeleft);
+ #   &timedisplay($sec);
+    print "]Time:$timeleft2 \n";
+    sleep($sec); 
+}
+print "\a";
+system "sleep 1";
+print "\a";
+system "sleep 1";
+print "\a";
+system "sleep 1";
+print "\a";
+system "sleep 1";
+print "\a";
+system "sleep 1";
+
+print "\n\n 60 Seconds before programs get killed (Ctrl-c to kill)\n";
+
+system "$xtermlocation -e $perllocation $bedlocation popup&";
+
+print "\n\n 60 Seconds before System Shutdown (Ctrl-c to kill)\n";
+sleep(60);
+
+print "halting !!!!!!!!!!!!!!!!\n\n";
+
+# system "/sbin/shutdown -hP 1";
+system "$shutdown_command";
+
+
+}
+else { 
+print "\n Formating Error!!!!!!!!! \n"; 
+$error = 1;
+}
+
+}
+elsif ($ARGV[0] eq "popup"){
+print <<EndWarn;
+######################################################################### 
+#///////////////////////////////////////////////////////////////////////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\**\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#/////////////////////////////////%%@*//////////////////////////////////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\%%%@*\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#/////////////////////////////////%%%@*/////////////////////////////////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\%%%@*\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#/////////////////////////////////%%%@*/////////////////////////////////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\%%%@*\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#/////////////////////////////////%%@*//////////////////////////////////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\%%@*\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#//////////////////////////////////%@*//////////////////////////////////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\@*\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#//////////////////////////////////@////////////////////////////////////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#//////////////////////////////////**///////////////////////////////////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\%%@*\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#/////////////////////////////////%%@*//////////////////////////////////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#///////////////////////////////////////////////////////////////////////#
+#////Your/Computer/Will/Shutdown/In/Two/Min/If/You/Don't/Kill/bed////#
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+#########################################################################
+EndWarn
+print "Hit Enter to Kill bed ";
+$time = <STDIN>;
+system "kill \`ps -C bed -o pid --no-headers\`";
+}
+
+if ($error == 1){
+print <<EndUsage;
+######################################
+#  Usage
+#
+#  Type bed -h or bed --help for Usage i.e.this
+#
+#  Command line usage Example:
+#  [person\@computer scripts]\$ bed 3d 4h 9m
+#
+#  Sandard usage example:
+#  [person\@computer scripts]\$ bed
+#
+#  Enter time to sleep(ex. 1d 3h 5m)> 3d 4h 9m
+#
+#
+EndUsage
+}

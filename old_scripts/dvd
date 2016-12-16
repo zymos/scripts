@@ -1,0 +1,171 @@
+#!/bin/bash
+
+#######################################
+# DVD->MPlayer
+# Version: v0.01
+# Creater: Jeff Israel
+# Licese: GPL
+#
+# Description:
+#	Plays longest track of dvd or track selected by user
+#
+# Usage:
+#	dvd {mplayer parameters}
+#	dvd -a {mplayer parameters}
+#	dvd -t [0-9] {mplayer parameters}
+#
+# Options
+#	Have mplayer play lsdvd's longest track
+#		Option: blank
+#	Prints this help message
+#		Option: -h or --help
+# 	Enter track number
+# 		Option: -t
+#		Usage: -t [#]
+#	Interactiv: Displays lsdvd output, and ask for track number
+#		Option: -a
+#		Usage: -a
+# 
+
+
+#echo $0
+#echo $@
+#echo $#
+#echo $1
+#echo $0
+input_params='-softvol -softvol-max 300'
+
+##########################################
+# Help output
+#
+if [[ $1 == '-h' || $1 == '--help' ]];then
+	echo ' Description:
+	Plays longest track of dvd or track selected by user
+
+ Usage:
+	dvd {mplayer parameters}
+	dvd -a {mplayer parameters}
+	dvd -t [0-9] {mplayer parameters} /not enabled yet
+
+ Options
+	Have mplayer play lsdvds longest track
+		Option: blank
+	Prints this help message
+		Option: -h or --help
+ 	Enter track number
+ 		Option: -t
+		Usage: -t [#]
+	Interactiv: Displays lsdvd output, and ask for track number
+		Option: -a
+		Usage: -a
+'
+	exit 0
+fi
+
+
+
+
+########################################
+# Checks for 'lsdvd', and 'mplayer' installed
+#
+[ -n "$(which lsdvd)" ] || die 'lsdvd not installed'
+[ -n "$(which mplayer)" ] || die 'mplayer not installed'
+
+
+#echo $@
+#params=$@
+#echo $params
+#paramShift=${params[@]}
+#echo $paramShift
+#set $paramShift 
+#echo ${paramShift[0]}
+#shift
+#shift
+#echo $paramShift
+#shift
+#echo $paramShift
+
+
+
+########################################
+# The program....
+#
+
+
+
+echo "======================================================================"
+if [[ $@ == *'-a'* ]]; then #Interactive track entry
+	x=1
+	lsdvd | more
+	while [ $x ]; do
+		echo -n "Enter the track you want (^C to quit): "
+		read trackEntry
+		echo "you entered _ $trackEntry _"
+		if [[ $trackEntry == [0-9] || $trackEntry == [0-9][0-9] ]]; then
+			trackNum=$trackEntry
+			break
+		else
+			echo "Input error, needs to be a number....."
+		fi
+	done
+elif [[ $@ == *'-t'* ]]; then  #Manually entered track
+	set -- $*	
+	for i
+	do
+		if [[ $1 == '-t' ]]; then
+			shift;
+			echo "Track set to: $1, by you";
+			trackNum=$1
+			shift;
+		else
+			params="$params $1";
+			#echo "boo: $1";
+			shift;
+		fi
+	done
+	echo "the params w/ -t: $params";
+	echo "======================================================================"
+else #Autochecking for the longest track
+	echo "checking for longest track..."
+	discinfo=`lsdvd 2>/dev/null`
+	trackNum=`echo "$discinfo" | grep '^Longest track: ' | sed 's/.*: 0*//'`
+	#echo "lsdvd says: track num $trackNum"
+	if [[ -n $trackNum ]]; then
+		echo "track set to $trackNum, by lsdvd"	
+		echo "ready to play..."
+		echo "======================================================================"
+	else
+		echo "No track number!"
+		echo "U didn't enter one, and lsdvd didn't find one."
+		echo "Did u put a disk in?"
+		echo "======================================================================"
+		exit 0
+	fi
+fi
+
+echo
+echo
+
+
+
+##################################
+# Run mplayer...
+#
+if [[ -n $trackNum ]]; then
+	echo "Now playing track: $trackNum"
+	mplayer $input_params dvd://$trackNum
+fi
+
+echo
+echo "======================================================================"
+echo "bye bye...."
+
+
+
+
+#if [[ -z $trackNum ]]; then
+	#echo "No track number!"
+	#echo "U didn't enter one, and lsdvd didn't find one."
+	#echo "Did u put a disk in?"
+#fi
+

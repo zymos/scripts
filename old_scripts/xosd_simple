@@ -1,0 +1,12 @@
+#!/bin/sh
+
+FONT='10x20'
+
+exec osd_cat \
+	--font="$FONT" \
+   	--shadow=1  \
+	--color=green \
+	--pos=middle \
+	--align=center \
+	--delay=2 \
+    ${1+"$@"}
