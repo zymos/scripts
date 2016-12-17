@@ -1,0 +1,95 @@
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+
+##############################################
+# Webm + vorbis (1-pass)
+#
+
+# Source
+https://www.virag.si/2012/01/webm-web-video-encoding-tutorial-with-ffmpeg-0-9/
+
+
+ffmpeg -i input_file.avi -codec:v libvpx -quality good -cpu-used 0 -b:v 500k -qmin 10 -qmax 42 -maxrate 500k -bufsize 1000k -threads 4 -vf scale=-1:480 -codec:a libvorbis -b:a 128k output.webm
+
+
+
+
+##############################################
+# Webm + vorbis (2-pass)
+#
+
+# Source
+https://www.virag.si/2012/01/webm-web-video-encoding-tutorial-with-ffmpeg-0-9/
+
+
+ffmpeg -i input_file.avi -codec:v libvpx -quality good -cpu-used 0 -b:v 500k -qmin 10 -qmax 42 -maxrate 500k -bufsize 1000k -threads 4 -vf scale=-1:480 -an -pass 1 -f webm /dev/null
+
+ffmpeg -i input_file.avi -codec:v libvpx -quality good -cpu-used 0 -b:v 500k -qmin 10 -qmax 42 -maxrate 500k -bufsize 1000k -threads 4 -vf scale=-1:480 -codec:a libvorbis -b:a 128k -pass 2 -f webm output.webm
+
+
+
+
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+
+######################################################
+#  x264 + fdk_acc (2-pass)
+#
+
+# Source
+http://trac.ffmpeg.org/wiki/x264EncodingGuide
+https://www.virag.si/2012/01/web-video-encoding-tutorial-with-ffmpeg-0-9/
+
+
+ACODEC="-c:a libfdk_aac -vbr 3"
+VCODEC="-c:v libx264 -preset slow -threads 0 -b:v 3000k -x264opts frameref=15:fast_pskip=0"
+
+$NICENESS_CMD $FFMPEG_CMD -i $INPUT_VIDEO -an $VCODEC -pass 1 -f rawvideo -y /dev/null
+$NICENESS_CMD $FFMPEG_CMD -i $INPUT_VIDEO $ACODEC $VCODEC -pass 2 $OUTPUT_VIDEO
+
+
+##############################################
+# x256
+
+Source: https://trac.ffmpeg.org/wiki/Encode/H.265
+
+ffmpeg -i in.mp4 -c:v libx265 -preset medium -crf 28  -c:a libopus -b:a 64k out.mkv
+
+
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+
+
+
+##########################################################
+# x264 + faac (1-pass)
+#
+
+$video_x264_preset="medium";
+$video_x264_quality="22"; #lower crf will give higher quality
+$audio_bitrate="96k";
+$audio_bandwidth="44100";
+$audio_channels="2";
+
+$video_codec_options_libx264="libx264 -preset $video_x264_preset -crf $video_x264_quality -threads 0";
+$audio_codec_options_libfaac="libfaac -ac $audio_channels -ar $audio_bandwidth -ab $audio_bitrate";
+$niceness_command="nice -n $niceness ionice -c2 -n$io_niceness";
+
+$niceness_command $FFMPEG_CMD -i \"$file_name_full\" -acodec $audio_codec_options_libfaac -vcodec $video_codec_options_libx264 \"$new_file_name\" &>> $log_file
+
+
+
+###########################################################################
+###########################################################################
+###########################################################################
+###########################################################################
+
+
+
+
