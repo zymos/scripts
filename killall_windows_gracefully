@@ -1,0 +1,179 @@
+#!/bin/bash
+
+##############################################################
+# 
+#	"Close Programs/Windows gracefully, via command-line"
+#	
+#	Author: ZyMOS
+#
+#	Date: 2012-2023
+#
+#	Description:
+#		This scripts closes various programs gracefully.  
+#     This means the programs will close the programs as 
+#     it expects to exited/quit/closed.
+#		In some cases this will save the current state of the program, 
+#		in other cases it will query the user to save current document.
+#		This script can be used to shutdown your computer via command-
+#		line without worrying about losing documents or crashing 
+#		programs.  
+#     It is likely some of these are out of date because I stopped
+#     using them.
+#     Add more programs using examples below.
+#
+#  License: Public Domain (CC0), way to basic to mater
+#
+#	Requirements: wmctrl, xdotool (for closing some)
+#
+############################################################
+
+
+
+
+
+
+
+############################################################
+# Close programs,
+#  that require wmctrl
+#
+
+if ! command -v wmctrl &> /dev/null; then
+	echo "wmctrl is required to close some commands"
+else
+
+
+
+   # LibreOffice
+   if [[ -n `pidof soffice.bin` ]];then
+      echo "Closing LibreOffice/OpenOffice..."
+      (wmctrl -c LibreOffice &)
+      (wmctrl -c OpenOffice &)
+   fi
+
+   # DeadBeef
+   if [[ -n `pidof deadbeef` ]];then
+      echo "Closing DeaDBeeF..."
+      (wmctrl -c DeaDBeeF &)
+   fi
+
+   # Inkscape
+   if [[ -n `pidof inkscape` ]];then
+      echo "Closing Inkscape..."
+      (wmctrl -c Inkscape &)
+   fi
+
+   # Gimp
+   if [[ -n `pidof gimp` ]];then
+      echo "Closing Gimp..."
+      (wmctrl -c gimp &)
+   fi
+
+   # qBittorrent
+   if [[ -n `pidof qbittorrent` ]]; then
+      echo "Closing qBittorrent (if its open)..."
+      (wmctrl -c qBittorrent &)
+   fi
+
+
+fi 
+# end of programs that require wmctrl
+#########################################################
+
+
+
+
+
+
+#########################################################
+# Close programs
+#   that require xdotool
+#
+
+if ! command -v xdotool &> /dev/null; then
+	echo "xdotool is required"
+else
+
+
+   # Transmission... (may not work in minimized in tray, to fix)
+   # for transmission-cli: see transmission-remote
+   if [[ -n `pidof transmission-gtk` || -n `pidof transmission-qt` ]];then
+      echo "Closing Transmission..."
+       WID=`xdotool search "Transmission" | head -1`
+       xdotool windowactivate --sync $WID
+       xdotool key --clearmodifiers ctrl+q
+   fi
+
+   # mozilla firefox...
+   # 	needs ctrl-q to save all tabs on multiple windows
+   if [[ -n `pidof firefox` || -n `pidof firefox.bin` || -n `pidof firefox.real` ]];then
+      echo "Closing firefox..."
+       WID=`xdotool search "Mozilla Firefox" | head -1`
+       xdotool windowactivate --sync $WID
+       xdotool key --clearmodifiers ctrl+q
+   fi
+
+
+fi 
+# end of programs that require xdotool
+###########################################################
+
+
+
+
+
+###########################################################
+# Close programs,
+#  that do not require wmctrl or xdotool
+#
+
+
+# Pidgin...
+if command -v purple-remote &> /dev/null; then
+	echo "Closing pidgin (if its open)..."
+	(purple-remote "quit"  &)
+fi
+
+# Virtualbox
+if [[ -n `pidof VirtualBox` ]];then
+   echo "VirtualBox is open, "
+	echo "Closing VirtualBox's in saved state..."
+	WID=`VBoxManage list runningvms|sed 's/.*{//'|sed 's/}//'`
+   	VBoxManage controlvm $WID savestate 
+fi
+
+# rtorrent
+if [[ -n `pidof rtorrent` ]];then
+	echo "rtorrent is open, time to die (gracefully)...."
+	(kill -2 `pidof rtorrent` &)
+fi
+
+# chromium and/or chrome browser
+if [[ -n `pidof chrome`  ]];then
+   echo "chrome browser is open, time to die (gracefully)...."
+   (pkill chrome &)
+fi
+if [[ -n `pidof chromium-browser`  ]];then
+   echo "chromium-browser is open, time to die (gracefully)...."
+   (pkill chrome &)
+fi
+
+
+
+
+###############################################################
+# Finally try to close all windows,
+#  via wmctrl
+#
+
+if ! command -v wmctrl &> /dev/null; then
+	echo "wmctrl is required"
+else
+	# wait a few seconds for above processes, then close all
+	sleep 5
+	# list all open windows, then close them
+	wmctrl -l|egrep -i "  0 "|cut -d ' ' -f 1|xargs -i% wmctrl -i -c %
+fi
+
+
+# end
